@@ -1,36 +1,161 @@
-struct Note {
-    pitch: u8,
-    velocity: u8,
-    start_time: f32,
-    duration: f32,
-    channel: u8,
+// src/midi/note.rs
+
+use bytemuck::{Pod, Zeroable};
+
+/// Represents a MIDI note with timing and channel information
+#[derive(Debug, Clone, Copy)]
+pub struct Note {
+    pub pitch: u8,
+    pub velocity: u8,
+    pub start_time: f32,
+    pub duration: f32,
+    pub channel: u8,
 }
 
 impl Note {
-    // Calculate end time of the note
-    fn end_time(&self) -> f32 {
+    /// Create a new note with the given parameters
+    pub fn new(pitch: u8, velocity: u8, start_time: f32, duration: f32, channel: u8) -> Self {
+        Note {
+            pitch,
+            velocity,
+            start_time,
+            duration,
+            channel,
+        }
+    }
+
+    /// Calculate end time of the note
+    pub fn end_time(&self) -> f32 {
         self.start_time + self.duration
     }
 
-    // Get color based on the channel using HSV to RGB conversion
-    fn get_color(&self) -> (u8, u8, u8) {
-        let (h, s, v) = (self.channel as f32 * 60.0, 255.0, 255.0);
-        let c = v * s / 255.0;
-        let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
-        let m = v as f32 - c;
-        let (r, g, b) = match h {
-            0.0..=60.0 => (c, x, 0.0),
-            60.0..=120.0 => (x, c, 0.0),
-            120.0..=180.0 => (0.0, c, x),
-            180.0..=240.0 => (0.0, x, c),
-            240.0..=300.0 => (x, 0.0, c),
-            _ => (c, 0.0, x),
-        };
-        ((r + m) as u8, (g + m) as u8, (b + m) as u8)
+    /// Check if the note is visible at the given playback time within a time window
+    pub fn is_visible(&self, current_time: f32, time_window: f32) -> bool {
+        let window_start = current_time - time_window * 0.1;
+        let window_end = current_time + time_window * 0.9;
+        self.start_time <= window_end && self.end_time() >= window_start
     }
 
-    // Get y position for screen rendering
-    fn get_y_position(&self, screen_height: f32) -> f32 {
-        screen_height - (self.channel as f32 * (screen_height / 16.0))
+    /// Get color as [r, g, b, a] based on the channel using HSV to RGB conversion
+    pub fn get_color(&self) -> [f32; 4] {
+        // Use channel to create distinct colors (16 channels -> 16 different hues)
+        let hue = (self.channel as f32 / 16.0) * 360.0;
+        let saturation = 0.8;
+        let value = 0.5 + (self.velocity as f32 / 127.0) * 0.5; // Velocity affects brightness
+        
+        let (r, g, b) = hsv_to_rgb(hue, saturation, value);
+        [r, g, b, 1.0]
+    }
+
+    /// Get y position for screen rendering (0.0 to 1.0 normalized)
+    pub fn get_y_position(&self) -> f32 {
+        self.pitch as f32 / 127.0
+    }
+
+    /// Get x position for screen rendering based on current time
+    pub fn get_x_position(&self, current_time: f32, time_window: f32) -> f32 {
+        // Notes move from right to left
+        // Current playback position is at 10% from the left
+        let playhead_position = 0.1;
+        let time_offset = self.start_time - current_time;
+        playhead_position + (time_offset / time_window) * 0.9
+    }
+
+    /// Get the width of the note on screen
+    pub fn get_width(&self, time_window: f32) -> f32 {
+        (self.duration / time_window) * 0.9
+    }
+}
+
+/// Convert HSV color to RGB
+fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (f32, f32, f32) {
+    let c = v * s;
+    let h_prime = h / 60.0;
+    let x = c * (1.0 - ((h_prime % 2.0) - 1.0).abs());
+    let m = v - c;
+    
+    let (r, g, b) = if h_prime < 1.0 {
+        (c, x, 0.0)
+    } else if h_prime < 2.0 {
+        (x, c, 0.0)
+    } else if h_prime < 3.0 {
+        (0.0, c, x)
+    } else if h_prime < 4.0 {
+        (0.0, x, c)
+    } else if h_prime < 5.0 {
+        (x, 0.0, c)
+    } else {
+        (c, 0.0, x)
+    };
+    
+    (r + m, g + m, b + m)
+}
+
+/// GPU-friendly instance data for rendering notes
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Pod, Zeroable)]
+pub struct NoteInstance {
+    pub position: [f32; 2],  // X, Y screen position
+    pub size: [f32; 2],      // Width, Height
+    pub color: [f32; 4],     // RGBA color
+}
+
+impl NoteInstance {
+    pub fn from_note(note: &Note, current_time: f32, time_window: f32, note_height: f32) -> Self {
+        let x = note.get_x_position(current_time, time_window);
+        let y = note.get_y_position();
+        let width = note.get_width(time_window);
+        let color = note.get_color();
+        
+        NoteInstance {
+            position: [x, y],
+            size: [width, note_height],
+            color,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_note_creation() {
+        let note = Note::new(60, 100, 1.0, 0.5, 0);
+        assert_eq!(note.pitch, 60);
+        assert_eq!(note.velocity, 100);
+        assert_eq!(note.start_time, 1.0);
+        assert_eq!(note.duration, 0.5);
+        assert_eq!(note.channel, 0);
+    }
+
+    #[test]
+    fn test_end_time() {
+        let note = Note::new(60, 100, 1.0, 0.5, 0);
+        assert_eq!(note.end_time(), 1.5);
+    }
+
+    #[test]
+    fn test_visibility() {
+        let note = Note::new(60, 100, 5.0, 1.0, 0);
+        // Note starts at 5.0 and ends at 6.0
+        
+        // With current_time=5.0 and time_window=10.0:
+        // window_start = 5.0 - 1.0 = 4.0
+        // window_end = 5.0 + 9.0 = 14.0
+        // Note (5.0-6.0) is within (4.0-14.0)
+        assert!(note.is_visible(5.0, 10.0));
+        
+        // With current_time=0.0 and time_window=10.0:
+        // window_start = 0.0 - 1.0 = -1.0
+        // window_end = 0.0 + 9.0 = 9.0
+        // Note (5.0-6.0) is within (-1.0-9.0)
+        assert!(note.is_visible(0.0, 10.0));
+        
+        // With current_time=20.0 and time_window=10.0:
+        // window_start = 20.0 - 1.0 = 19.0
+        // window_end = 20.0 + 9.0 = 29.0
+        // Note (5.0-6.0) is NOT within (19.0-29.0)
+        assert!(!note.is_visible(20.0, 10.0));
     }
 }
