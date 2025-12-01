@@ -118,20 +118,20 @@ impl InputHandler {
         match action {
             InputAction::TogglePlayback => {
                 player.toggle_playback();
-                log::info!("Playback: {}", if player.is_playing() { "Playing" } else { "Paused" });
+                log::debug!("Playback: {}", if player.is_playing() { "Playing" } else { "Paused" });
             }
             InputAction::IncreaseSpeed => {
                 player.increase_speed();
-                log::info!("Speed: {:.1}x", player.get_playback_speed());
+                log::debug!("Speed: {:.1}x", player.get_playback_speed());
             }
             InputAction::DecreaseSpeed => {
                 player.decrease_speed();
-                log::info!("Speed: {:.1}x", player.get_playback_speed());
+                log::debug!("Speed: {:.1}x", player.get_playback_speed());
             }
             InputAction::ToggleOverlay => {
                 overlay.toggle();
                 config.performance.enable_performance_overlay = overlay.is_visible();
-                log::info!("Overlay: {}", if overlay.is_visible() { "Visible" } else { "Hidden" });
+                log::debug!("Overlay: {}", if overlay.is_visible() { "Visible" } else { "Hidden" });
             }
             InputAction::ToggleSlowMode => {
                 config.performance.slow_mode = !config.performance.slow_mode;
@@ -142,11 +142,11 @@ impl InputHandler {
                     config.performance.frame_lock = None;
                     config.quality.particle_density = 1.0;
                 }
-                log::info!("Slow mode: {}", if config.performance.slow_mode { "Enabled" } else { "Disabled" });
+                log::debug!("Slow mode: {}", if config.performance.slow_mode { "Enabled" } else { "Disabled" });
             }
             InputAction::Reset => {
                 player.reset();
-                log::info!("Playback reset to start");
+                log::debug!("Playback reset to start");
             }
             _ => {}
         }

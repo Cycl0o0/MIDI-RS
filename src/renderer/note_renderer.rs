@@ -58,8 +58,6 @@ pub struct NoteRenderer {
     time_window: f32,
     /// Note height in normalized coordinates
     note_height: f32,
-    /// Batch size for rendering
-    batch_size: u32,
 }
 
 impl NoteRenderer {
@@ -71,7 +69,6 @@ impl NoteRenderer {
             max_instances: config.quality.max_note_count,
             time_window: 5.0, // 5 seconds visible at once
             note_height: config.display.note_height / 127.0, // Normalize to pitch range
-            batch_size: 10_000,
         }
     }
 
@@ -112,8 +109,7 @@ impl NoteRenderer {
         };
 
         if needs_new_buffer {
-            // Create a new buffer with some extra capacity
-            let _capacity = ((self.instance_count as f32 * 1.5) as u32).max(self.batch_size);
+            // Create a new buffer (create_buffer_init already sizes the buffer appropriately)
             self.instance_buffer = Some(pipeline.device.create_buffer_init(
                 &wgpu::util::BufferInitDescriptor {
                     label: Some("Note Instance Buffer"),
