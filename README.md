@@ -6,6 +6,9 @@ A high-performance Black MIDI visualizer written in Rust, designed to handle mil
 
 - **GPU-Accelerated Rendering**: Uses WGPU for efficient rendering of millions of notes
 - **Instanced Rendering**: Optimized for Black MIDI files with 100k+ simultaneous notes
+- **Top-Down Note Display**: Notes fall from top to bottom like PFA (Piano From Above) software
+- **Piano Keyboard Visualization**: Visible piano keyboard at the bottom shows which keys are being played
+- **Interactive UI Controls**: Clickable buttons for playback control (in addition to keyboard shortcuts)
 - **Real-time Performance Overlay**: FPS counter, note count, and frame time display
 - **Configurable Quality Settings**: Multiple presets for different hardware capabilities
 - **Slow Mode**: 30 FPS lock for stable YouTube recording
@@ -44,6 +47,19 @@ cargo run --release
 cargo run --release -- path/to/your/file.mid
 ```
 
+### UI Controls
+
+The application features clickable UI buttons in the top-left corner:
+
+| Button | Action |
+|--------|--------|
+| ▶/⏸ | Play/Pause |
+| ⏮ | Reset to start |
+| - | Decrease playback speed |
+| + | Increase playback speed |
+| 🐢 | Toggle slow mode (30 FPS) |
+| 📊 | Toggle performance overlay |
+
 ### Keyboard Controls
 
 | Key | Action |
@@ -62,6 +78,15 @@ cargo run --release -- path/to/your/file.mid
 - **Drag & Drop**: Simply drag a `.mid` or `.midi` file onto the application window
 - **Command Line**: Pass the file path as an argument when launching
 
+## Visualization Layout
+
+The visualization is laid out as follows:
+- **Notes**: Fall from top to bottom (future notes above, past notes below)
+- **Playhead**: Located near the bottom of the screen (15% from bottom)
+- **Piano Keyboard**: Rendered at the bottom 12% of the screen
+- **UI Controls**: Located in the top-left corner
+- **Active Notes**: Piano keys light up when notes are being played
+
 ## Configuration
 
 The application uses a `config.json` file for persistent settings. If not present, a default configuration will be created.
@@ -77,7 +102,7 @@ The application uses a `config.json` file for persistent settings. If not presen
 
 ### Slow Mode
 
-Enable slow mode (`S` key) for:
+Enable slow mode (`S` key or 🐢 button) for:
 - Consistent 30 FPS for YouTube recording
 - Reduced particle effects
 - Better frame time consistency
@@ -99,10 +124,12 @@ src/
 │   ├── mod.rs        # Renderer module exports
 │   ├── pipeline.rs   # WGPU render pipeline
 │   ├── note_renderer.rs  # Note instance rendering
+│   ├── piano_renderer.rs # Piano keyboard rendering
 │   └── overlay.rs    # Performance overlay
 └── ui/
     ├── mod.rs        # UI module exports
-    └── input.rs      # Input handling
+    ├── input.rs      # Keyboard/mouse input handling
+    └── controls.rs   # UI button controls
 
 assets/
 └── shaders/

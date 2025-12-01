@@ -1,5 +1,6 @@
 // Note rendering shader for MIDI-RS Black MIDI Visualizer
 // Uses instanced rendering for efficient note display
+// Notes fall from top to bottom (like PFA - Piano From Above)
 
 // Uniforms passed from CPU
 struct Uniforms {
@@ -46,7 +47,8 @@ fn vs_main(
     let world_pos = instance.instance_position + vertex.position * instance.instance_size;
     
     // Convert to clip space (-1 to 1)
-    // Y is inverted so that higher pitch = higher on screen
+    // X maps pitch to horizontal position (0=left, 1=right)
+    // Y maps time to vertical position (notes fall from top to bottom)
     let clip_x = world_pos.x * 2.0 - 1.0;
     let clip_y = world_pos.y * 2.0 - 1.0;
     
@@ -63,8 +65,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // Simple flat color rendering for performance
     var color = in.color;
     
-    // Optional: Add slight glow effect based on distance from playhead
-    let playhead_distance = abs(in.world_position.x - uniforms.playhead_position);
+    // Add slight glow effect based on distance from playhead (near bottom)
+    let playhead_y = 0.15; // Playhead is at 15% from bottom
+    let playhead_distance = abs(in.world_position.y - playhead_y);
     let glow_factor = 1.0 - smoothstep(0.0, 0.05, playhead_distance);
     
     // Brighten notes near the playhead
@@ -75,12 +78,18 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         color.a
     );
     
-    // Optional: Fade notes that are far from the playhead
-    let fade_start = 0.7;
-    let fade_end = 0.95;
-    if in.world_position.x > fade_start {
-        let fade_factor = 1.0 - smoothstep(fade_start, fade_end, in.world_position.x);
+    // Fade notes at the top of the screen (far future)
+    let fade_start = 0.85;
+    let fade_end = 0.98;
+    if in.world_position.y > fade_start {
+        let fade_factor = 1.0 - smoothstep(fade_start, fade_end, in.world_position.y);
         color.a *= fade_factor;
+    }
+    
+    // Slight fade for notes below the playhead (past notes)
+    if in.world_position.y < playhead_y {
+        let past_fade = smoothstep(0.0, playhead_y, in.world_position.y);
+        color.a *= past_fade * 0.5 + 0.5;
     }
     
     return color;
