@@ -50,9 +50,16 @@ impl PianoRenderer {
     pub fn update(&mut self, pipeline: &RenderPipeline, active_pitches: &[u8]) {
         self.set_active_keys(active_pitches);
 
-        let mut instances: Vec<NoteInstance> = Vec::with_capacity(128 + 50); // White + black keys
+        // 128 MIDI notes total: 75 white keys + 53 black keys
+        const WHITE_KEY_COUNT: usize = 75;
+        const BLACK_KEY_COUNT: usize = 53;
+        let mut instances: Vec<NoteInstance> = Vec::with_capacity(WHITE_KEY_COUNT + BLACK_KEY_COUNT);
         let key_width = 1.0 / 128.0;
 
+        // Draw keys at their MIDI pitch positions
+        // Each MIDI pitch maps directly to a horizontal position
+        // This creates a linear mapping where all 128 keys fill the screen width
+        
         // First draw white keys (they go behind black keys)
         for pitch in 0..128u8 {
             if Self::is_black_key(pitch) {

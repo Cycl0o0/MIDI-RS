@@ -65,6 +65,11 @@ impl Button {
     }
 }
 
+/// Default screen dimensions for UI coordinate calculations
+/// These are used as initial values before the actual window size is known
+const DEFAULT_SCREEN_WIDTH: f32 = 1920.0;
+const DEFAULT_SCREEN_HEIGHT: f32 = 1080.0;
+
 /// UI Controls manager
 pub struct UIControls {
     buttons: Vec<Button>,
@@ -105,8 +110,8 @@ impl UIControls {
             instance_buffer: None,
             instance_count: 0,
             visible: true,
-            screen_width: 1920.0,
-            screen_height: 1080.0,
+            screen_width: DEFAULT_SCREEN_WIDTH,
+            screen_height: DEFAULT_SCREEN_HEIGHT,
         }
     }
 
@@ -269,6 +274,11 @@ impl UIControls {
     }
 
     /// Get button labels for display (can be used for text rendering in the future)
+    /// 
+    /// Returns a vector of tuples containing:
+    /// - `label`: The display text/emoji for the button
+    /// - `x`: X position of the button center in normalized screen coordinates (0.0 to 1.0)
+    /// - `y`: Y position of the button center in normalized screen coordinates (0.0 to 1.0)
     pub fn get_button_labels(&self) -> Vec<(&'static str, f32, f32)> {
         self.buttons
             .iter()

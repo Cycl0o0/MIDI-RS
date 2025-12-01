@@ -52,7 +52,8 @@ impl Note {
     /// Get x position for screen rendering (0.0 to 1.0 normalized based on pitch)
     /// Maps the pitch to a horizontal position like a piano keyboard
     pub fn get_x_position_from_pitch(&self) -> f32 {
-        self.pitch as f32 / 127.0
+        // MIDI pitch values range from 0-127 (128 values total)
+        self.pitch as f32 / 128.0
     }
 
     /// Get y position for screen rendering based on current time
@@ -156,21 +157,21 @@ mod tests {
         // Note starts at 5.0 and ends at 6.0
         
         // With current_time=5.0 and time_window=10.0:
-        // window_start = 5.0 - 1.0 = 4.0
-        // window_end = 5.0 + 9.0 = 14.0
-        // Note (5.0-6.0) is within (4.0-14.0)
+        // window_start = 5.0 - 1.5 = 3.5 (15% below)
+        // window_end = 5.0 + 8.5 = 13.5 (85% above)
+        // Note (5.0-6.0) is within (3.5-13.5)
         assert!(note.is_visible(5.0, 10.0));
         
         // With current_time=0.0 and time_window=10.0:
-        // window_start = 0.0 - 1.0 = -1.0
-        // window_end = 0.0 + 9.0 = 9.0
-        // Note (5.0-6.0) is within (-1.0-9.0)
+        // window_start = 0.0 - 1.5 = -1.5
+        // window_end = 0.0 + 8.5 = 8.5
+        // Note (5.0-6.0) is within (-1.5-8.5)
         assert!(note.is_visible(0.0, 10.0));
         
         // With current_time=20.0 and time_window=10.0:
-        // window_start = 20.0 - 1.0 = 19.0
-        // window_end = 20.0 + 9.0 = 29.0
-        // Note (5.0-6.0) is NOT within (19.0-29.0)
+        // window_start = 20.0 - 1.5 = 18.5
+        // window_end = 20.0 + 8.5 = 28.5
+        // Note (5.0-6.0) is NOT within (18.5-28.5)
         assert!(!note.is_visible(20.0, 10.0));
     }
 }
