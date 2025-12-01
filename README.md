@@ -144,10 +144,6 @@ Contributions are welcome! Please follow these guidelines:
 5. Run clippy (`cargo clippy`)
 6. Submit a pull request
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## Acknowledgments
 
 - [midly](https://crates.io/crates/midly) - MIDI parsing library
