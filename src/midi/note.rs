@@ -30,9 +30,11 @@ impl Note {
     }
 
     /// Check if the note is visible at the given playback time within a time window
+    /// For vertical rendering: notes are visible from above the playhead down to below it
     pub fn is_visible(&self, current_time: f32, time_window: f32) -> bool {
-        let window_start = current_time - time_window * 0.1;
-        let window_end = current_time + time_window * 0.9;
+        // Notes visible from 15% below current time to 85% above current time
+        let window_start = current_time - time_window * 0.15;
+        let window_end = current_time + time_window * 0.85;
         self.start_time <= window_end && self.end_time() >= window_start
     }
 
@@ -47,23 +49,33 @@ impl Note {
         [r, g, b, 1.0]
     }
 
-    /// Get y position for screen rendering (0.0 to 1.0 normalized)
-    pub fn get_y_position(&self) -> f32 {
+    /// Get x position for screen rendering (0.0 to 1.0 normalized based on pitch)
+    /// Maps the pitch to a horizontal position like a piano keyboard
+    pub fn get_x_position_from_pitch(&self) -> f32 {
         self.pitch as f32 / 127.0
     }
 
-    /// Get x position for screen rendering based on current time
-    pub fn get_x_position(&self, current_time: f32, time_window: f32) -> f32 {
-        // Notes move from right to left
-        // Current playback position is at 10% from the left
-        let playhead_position = 0.1;
+    /// Get y position for screen rendering based on current time
+    /// Notes fall from top to bottom - playhead is near the bottom
+    pub fn get_y_position_from_time(&self, current_time: f32, time_window: f32) -> f32 {
+        // Notes fall from top (1.0) to bottom (0.0)
+        // Playhead position is at the bottom (above the piano keyboard)
+        let playhead_position = 0.15; // 15% from bottom (piano area is below)
         let time_offset = self.start_time - current_time;
-        playhead_position + (time_offset / time_window) * 0.9
+        // Notes above the playhead are in the future, below are in the past
+        playhead_position + (time_offset / time_window) * 0.85
     }
 
-    /// Get the width of the note on screen
-    pub fn get_width(&self, time_window: f32) -> f32 {
-        (self.duration / time_window) * 0.9
+    /// Get the height of the note on screen (duration in vertical direction)
+    pub fn get_height(&self, time_window: f32) -> f32 {
+        (self.duration / time_window) * 0.85
+    }
+
+    /// Get the width of the note based on pitch (for piano-style rendering)
+    pub fn get_width_from_pitch(&self) -> f32 {
+        // Fixed width for each key - 88 keys on a piano (A0 to C8, MIDI 21-108)
+        // But we support all 128 MIDI notes
+        1.0 / 128.0
     }
 }
 
@@ -101,15 +113,18 @@ pub struct NoteInstance {
 }
 
 impl NoteInstance {
-    pub fn from_note(note: &Note, current_time: f32, time_window: f32, note_height: f32) -> Self {
-        let x = note.get_x_position(current_time, time_window);
-        let y = note.get_y_position();
-        let width = note.get_width(time_window);
+    /// Create a NoteInstance from a Note using vertical (top-to-bottom) rendering
+    #[allow(dead_code)]
+    pub fn from_note(note: &Note, current_time: f32, time_window: f32, _note_height: f32) -> Self {
+        let x = note.get_x_position_from_pitch();
+        let y = note.get_y_position_from_time(current_time, time_window);
+        let width = note.get_width_from_pitch();
+        let height = note.get_height(time_window);
         let color = note.get_color();
         
         NoteInstance {
             position: [x, y],
-            size: [width, note_height],
+            size: [width, height],
             color,
         }
     }

@@ -56,8 +56,6 @@ pub struct NoteRenderer {
     max_instances: u32,
     /// Time window for visible notes (in seconds)
     time_window: f32,
-    /// Note height in normalized coordinates
-    note_height: f32,
 }
 
 impl NoteRenderer {
@@ -68,7 +66,6 @@ impl NoteRenderer {
             instance_count: 0,
             max_instances: config.quality.max_note_count,
             time_window: 5.0, // 5 seconds visible at once
-            note_height: config.display.note_height / 127.0, // Normalize to pitch range
         }
     }
 
@@ -123,16 +120,18 @@ impl NoteRenderer {
         }
     }
 
-    /// Convert a Note to NoteInstance for GPU rendering
+    /// Convert a Note to NoteInstance for GPU rendering (vertical - top to bottom)
     fn note_to_instance(&self, note: &Note, current_time: f32) -> NoteInstance {
-        let x = note.get_x_position(current_time, self.time_window);
-        let y = note.get_y_position();
-        let width = note.get_width(self.time_window);
+        // For vertical rendering: x is based on pitch, y is based on time
+        let x = note.get_x_position_from_pitch();
+        let y = note.get_y_position_from_time(current_time, self.time_window);
+        let width = note.get_width_from_pitch();
+        let height = note.get_height(self.time_window);
         let color = note.get_color();
 
         NoteInstance {
             position: [x, y],
-            size: [width, self.note_height],
+            size: [width, height],
             color,
         }
     }

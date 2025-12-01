@@ -3,7 +3,7 @@
 use crate::config::AppConfig;
 use crate::midi::MidiPlayer;
 use crate::renderer::overlay::PerformanceOverlay;
-use winit::event::{ElementState, KeyEvent, WindowEvent};
+use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
 use winit::keyboard::{Key, NamedKey};
 
 /// Actions that can be triggered by input
@@ -33,6 +33,10 @@ pub enum InputAction {
     Resize(u32, u32),
     /// File dropped
     FileDropped(std::path::PathBuf),
+    /// Mouse moved
+    MouseMoved(f64, f64),
+    /// Mouse clicked
+    MouseClicked(f64, f64),
 }
 
 /// Handles all input for the application
@@ -41,6 +45,9 @@ pub struct InputHandler {
     file_hovered: bool,
     /// Whether fullscreen is enabled
     fullscreen: bool,
+    /// Current mouse position
+    mouse_x: f64,
+    mouse_y: f64,
 }
 
 impl InputHandler {
@@ -49,6 +56,8 @@ impl InputHandler {
         InputHandler {
             file_hovered: false,
             fullscreen: false,
+            mouse_x: 0.0,
+            mouse_y: 0.0,
         }
     }
 
@@ -75,6 +84,20 @@ impl InputHandler {
             }
             
             WindowEvent::CloseRequested => InputAction::Quit,
+
+            WindowEvent::CursorMoved { position, .. } => {
+                self.mouse_x = position.x;
+                self.mouse_y = position.y;
+                InputAction::MouseMoved(position.x, position.y)
+            }
+
+            WindowEvent::MouseInput { state, button, .. } => {
+                if *state == ElementState::Pressed && *button == MouseButton::Left {
+                    InputAction::MouseClicked(self.mouse_x, self.mouse_y)
+                } else {
+                    InputAction::None
+                }
+            }
             
             _ => InputAction::None,
         }
@@ -160,6 +183,11 @@ impl InputHandler {
     /// Check if fullscreen is enabled
     pub fn is_fullscreen(&self) -> bool {
         self.fullscreen
+    }
+
+    /// Get current mouse position
+    pub fn mouse_position(&self) -> (f64, f64) {
+        (self.mouse_x, self.mouse_y)
     }
 }
 
